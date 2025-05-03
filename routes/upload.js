@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
 const path = require('path');
 const fs = require('fs');
 
@@ -23,12 +24,30 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post('/', upload.single('image'), (req, res) => {
+cloudinary.config({
+    cloud_name: 'dkvpvv5c3',
+    api_key: '852637721374837',
+    api_secret: 'oy54TacQ-RVLrHRkrekUgULfheM'
+});
+
+router.post('/', upload.single('image'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
-    const fileUrl = `/uploads/${req.file.filename}`;
-    res.json({ success: true, data: { url: fileUrl } });
+    try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'your_folder_name' // optional
+        });
+
+        // Delete the file from local uploads folder
+        fs.unlink(req.file.path, (err) => {
+            if (err) console.error('Failed to delete local file:', err);
+        });
+
+        res.json({ success: true, data: { url: result.secure_url } });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Upload failed', error: err });
+    }
 });
 
 module.exports = router; 
